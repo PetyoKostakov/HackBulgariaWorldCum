@@ -6,29 +6,86 @@
 </head>
 <body>
 	<div class="container">
-		<div class="header">
+		<div class="page-header">
 	        <ul class="nav nav-pills pull-right">
 	          	<li class="active"><a href="#">Home</a></li>
 	        </ul>
-        	<h3 class="text-muted">Project name</h3>
+        	<h3 class="text-muted">Hack Bulgaria World Cup</h3>
       	</div>
       	<div class="matches-wrapper">
-      		<div class="jumbotron" style="height: 250px;">
-      			<h1>Some Content</h1>
-			</div>
       	</div>
 	</div>
-	<script src="./bower_components/jquery/dist/jquery.js"></script>
-	<script src="./bower_components/bootstrap/dist/js/bootstrap.js"></script>
-	<script src="./bower_components/handlebars/handlebars.js"></script>
-	<script type="text/javascript">
-		$(function() {
-			$.getJSON(" http://worldcup.sfg.io/matches/today",function(result){
-			    $.each(result, function(i, field){
-			    	  //iterate here
-			    });
-		  	});
-		});
-	</script>
+
+    <script type='text/temlpate' id='match-template'>
+        <div class='container entry'>
+            <div class='jumbotron text-center'>
+                {{#ifCond status}}
+                    <p class='h2'>Starts at {{datetime.time}}</p>
+                {{else}}
+                    <div class='progress progress-striped active'>
+                        <div class='progress-bar'  role='progressbar'
+                                            aria-valuemin='0' aria-valuemax='100' style='width: {{datetime.left_percentage}}%'>
+                        </div>
+                    </div>
+                     <h2><small>{{datetime.left}} min left</small></h2>
+                {{/ifCond}}
+
+                <div class='container'>
+                    <img class='popover-flag' data-container="body" data-toggle="popover"data-placement='left' data-trigger='hover'
+                        data-title='{{home_team.country}}'
+                        data-content='{{firstTeamDescription}}'
+                        src='flags/{{home_team.code}}.png'></img>
+
+                    <span class='h2'>{{home_team.goals}}</span>
+                    <span class='h2'>:</span>
+                    <span class='h2'>{{away_team.goals}}</span>
+
+                    <img class='popover-flag' data-container="body" data-toggle="popover" data-placement='right' data-trigger='hover'
+                        data-title='{{away_team.country}}'
+                        data-content='{{secondTeamDescription}}'
+                        src='flags/{{away_team.code}}.png'></img>
+                </div>
+            </div>
+        </div>
+    </script>
+
+    <script src="./bower_components/jquery/dist/jquery.js"></script>
+    <script src="./bower_components/bootstrap/dist/js/bootstrap.js"></script>
+    <script src="./bower_components/handlebars/handlebars.js"></script>
+    <script type="text/javascript">
+        $(function () {
+            var templateHtml = $('#match-template').html(),
+                template = Handlebars.compile(templateHtml),
+                current_date = new Date();
+
+            Handlebars.registerHelper('ifCond', function (status, options) {
+                if (status === 'future') {
+                    return options.fn(this);
+                } else {
+                    return options.inverse(this);
+                }
+            });
+
+            $.getJSON(" http://worldcup.sfg.io/matches/today", function (matches) {
+                $.each(matches, function(i, match) {
+                    var match_date = new Date(match.datetime),
+                        hours_passed = current_date.getUTCHours() -
+                            match_date.getUTCHours(),
+                        minutes_passed = current_date.getMinutes() -
+                            match_date.getMinutes(),
+                        time_passed = hours_passed * 60 + minutes_passed <= 90 || 90,
+                        time_left = 90 - time_passed;
+
+                    match.datetime = {
+                        time : match_date.toLocaleTimeString(),
+                        left : time_left,
+                        left_percentage : parseInt(time_passed / 90 * 100, 10)
+                    };
+                    $('.matches-wrapper').append(template(match));
+                });
+                $('.popover-flag').popover();
+            });
+        });
+    </script>
 </body>
 </html>
